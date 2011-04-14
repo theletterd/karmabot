@@ -72,7 +72,9 @@ conn, c = connect_to_db()
 
 while 1: 
   line = ircsocket.recv(2048).strip('\r\n')
-  if "PRIVMSG " in line:
+  if "PING :" in line:
+    ircsocket.send('PONG :pingis\n')
+  elif "PRIVMSG " in line:
     sender = line.split('!')[0][1:]
 
     # ignore anything the bot says
