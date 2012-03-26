@@ -31,35 +31,17 @@ from twisted.python import log
 # mine
 from persistence import Persistence
 from eightball import EightBall
+from message_logger import MessageLogger
 
 # system imports
 import time, sys
-
 
 import re
 karma_regex = re.compile('\w+\+\+|\w+--')
 
 
-class MessageLogger:
-    """
-    An independent logger class (because separation of application
-    and protocol logic is a good thing).
-    """
-    def __init__(self, file):
-        self.file = file
-
-    def log(self, message):
-        """Write a message to the file."""
-        timestamp = time.strftime("[%H:%M:%S]", time.localtime(time.time()))
-        self.file.write('%s %s\n' % (timestamp, message))
-        self.file.flush()
-
-    def close(self):
-        self.file.close()
-
-
-class LogBot(irc.IRCClient):
-    """A logging IRC bot."""
+class HyacinthBot(irc.IRCClient):
+    """An IRC bot."""
 
     nickname = "Hyacinth"
 
@@ -101,22 +83,14 @@ class LogBot(irc.IRCClient):
             self.msg(user, msg)
             return
 
-
-        ######## BEGIN KARMA
-        self.record_karmas(user, channel, msg)
-        if msg.startswith('!karma'):
-            self.process_karmastring(user, channel, msg)
-            return
-        ###### END KARMA
-
-        if msg.startswith('!8ball') and msg.endswith('?'):
-            self.msg(channel, self.eightball.get_answer())
-
         # Otherwise check to see if it is a message directed at me
         if msg.startswith(self.nickname + ":"):
             msg = "%s: I am a log bot" % user
             self.msg(channel, msg)
             self.logger.log("<%s> %s" % (self.nickname, msg))
+            return
+
+        self.process_message(user, channel, msg)
 
     def action(self, user, channel, msg):
         """This will get called when the bot sees someone do an action."""
@@ -142,6 +116,17 @@ class LogBot(irc.IRCClient):
         """
         return nickname + '^'
 
+    def process_msg(self, user, channel, msg):
+        self.record_karmas(user, channel, msg)
+        if msg.startswith('!karma'):
+            self.process_karmastring(user, channel, msg)
+            return
+
+        if msg.startswith('!8ball') and msg.endswith('?'):
+            self.msg(channel, self.eightball.get_answer())
+
+        if msg.startswith('!commands'):
+            self.msg(channel, '!karma, !8ball, !commands')
 
     def process_karmastring(self, user, channel, msg):
         # this is a stupid hack, since if there's not a space at the end
@@ -157,25 +142,30 @@ class LogBot(irc.IRCClient):
 
     def record_karmas(self, user, channel, msg):
         karmas = karma_regex.findall(msg)
-        if karmas:
-            for karma in karmas:
-                recipient = karma[:-2]
-                if recipient == user:
-                    self.msg(channel, 'no altering your own karma, %s' % user)
-                    continue
-                if karma.endswith('--'):
-                    self.persistence.record_karma(recipient, up=False)
-                else:
-                    self.persistence.record_karma(recipient, up=True)
 
-class LogBotFactory(protocol.ClientFactory):
-    """A factory for LogBots.
+        # fuckin' indentation
+        if not karmas:
+            return
+
+        for karma in karmas:
+            recipient = karma[:-2]
+            if recipient == user:
+                self.msg(channel, 'no altering your own karma, %s' % user)
+                continue
+            if karma.endswith('--'):
+                self.persistence.record_karma(recipient, up=False)
+            else:
+                self.persistence.record_karma(recipient, up=True)
+
+
+class HyacinthBotFactory(protocol.ClientFactory):
+    """A factory for HyacinthBots.
 
     A new protocol instance will be created each time we connect to the server.
     """
 
     # the class of the protocol to build when new connection is made
-    protocol = LogBot
+    protocol = HyacinthBot
 
     def __init__(self, channel, filename):
         self.channel = channel
@@ -195,7 +185,7 @@ if __name__ == '__main__':
     log.startLogging(sys.stdout)
 
     # create factory protocol and application
-    f = LogBotFactory(sys.argv[1], sys.argv[2])
+    f = HyacinthBotFactory(sys.argv[1], sys.argv[2])
 
     # connect factory to this host and port
     reactor.connectTCP("irc.freenode.net", 6667, f)
