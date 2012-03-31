@@ -6,11 +6,11 @@ import time
 import re
 
 SQLITE_DB = 'karma'
-SERVER = 'irc.jlatt.com'
-PORT = 6697 
-USERNAME = 'duncan'
-BOTNICK = 'karmabot' 
-CHANNEL = '#darwin' 
+SERVER = 'irc.freenode.net'
+PORT = 6697
+USERNAME = 'Lizzypants'
+BOTNICK = 'Hyacinth'
+CHANNEL = '#r.crossdressing'
 PASSWORD = ''
 KARMA_TABLE = 'karmalog'
 karma_regex = re.compile('\w+\+\+|\w+--')
@@ -18,11 +18,11 @@ karma_regex = re.compile('\w+\+\+|\w+--')
 
 def connect_to_irc():
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  s.connect((SERVER, PORT)) #Connect to server 
+  s.connect((SERVER, PORT)) #Connect to server
   ircsocket = ssl.wrap_socket(s)
   ircsocket.send('PASS %s\n' % PASSWORD)
   ircsocket.send('NICK %s\n' % BOTNICK)
-  ircsocket.send('USER %s %s %s :%s\n' % (USERNAME, USERNAME, SERVER, BOTNICK)) #Identify to server 
+  ircsocket.send('USER %s %s %s :%s\n' % (USERNAME, USERNAME, SERVER, BOTNICK)) #Identify to server
   ircsocket.send('JOIN %s\n' % CHANNEL)
   return ircsocket
 
@@ -52,7 +52,7 @@ def update_karma(msg):
       score = -1
     else:
       score = 1
-            
+
     c.execute('insert into %s values (?,?,?)' % KARMA_TABLE, (int(time.time()), recipient, score))
     conn.commit()
 
@@ -63,14 +63,14 @@ def get_karma(username):
 
     c.execute('select name, sum(score) as sum_score from %s group by name order by sum_score desc limit 3' % KARMA_TABLE)
     top_3 = "Most karmic: " + ', '.join("%s (%s)" % entry for entry in c)
-    
+
     say(user_karma + top_3)
 
 
 ircsocket = connect_to_irc()
 conn, c = connect_to_db()
 
-while 1: 
+while 1:
   line = ircsocket.recv(2048).strip('\r\n')
   if "PING :" in line:
     ircsocket.send('PONG :pingis\n')
@@ -84,7 +84,7 @@ while 1:
     msg = line.split('PRIVMSG')[1]
     msg_start_index = msg.find(':')
     msg = msg[msg_start_index+1:]
-        
+
     if msg.startswith('!karma'):
       get_karma(sender)
     elif msg.startswith('!commands'):

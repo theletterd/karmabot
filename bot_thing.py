@@ -75,7 +75,7 @@ class HyacinthBot(irc.IRCClient):
     def privmsg(self, user, channel, msg):
         """This will get called when the bot receives a message."""
         user = user.split('!', 1)[0]
-        self.logger.log("<%s> %s" % (user, msg))
+        self.logger.log(msg)
 
         # Check to see if they're sending me a private message
         if channel == self.nickname:
@@ -116,17 +116,17 @@ class HyacinthBot(irc.IRCClient):
         """
         return nickname + '^'
 
-    def process_msg(self, user, channel, msg):
+    def process_message(self, user, channel, msg):
         self.record_karmas(user, channel, msg)
         if msg.startswith('!karma'):
             self.process_karmastring(user, channel, msg)
-            return
-
-        if msg.startswith('!8ball') and msg.endswith('?'):
+        elif msg.startswith('!8ball') and msg.endswith('?'):
             self.msg(channel, self.eightball.get_answer())
+        elif msg.startswith('!markov'):
+            self.msg(channel, 'not just yet')
+        elif msg.startswith('!commands'):
+            self.msg(channel, '!karma, !8ball, !markov, !commands')
 
-        if msg.startswith('!commands'):
-            self.msg(channel, '!karma, !8ball, !commands')
 
     def process_karmastring(self, user, channel, msg):
         # this is a stupid hack, since if there's not a space at the end
