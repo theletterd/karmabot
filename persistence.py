@@ -65,7 +65,7 @@ class Persistence(object):
             increments = (count + total_score) / 2
             decrements = increments - total_score
 
-            return "%s has karma of %s (+%d/-%d)" % (username, count, increments, decrements)
+            return "%s has karma of %s (+%d/-%d)" % (username, total_score, increments, decrements)
         else:
             cursor.execute('select name, sum(score) as sum_score from %s group by name order by sum_score desc limit 3' % KARMA_TABLE)
             return  "Most karmic: " + ', '.join("%s (%s)" % entry for entry in cursor)
