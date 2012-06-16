@@ -32,10 +32,12 @@ from twisted.python import log
 from persistence import Persistence
 from eightball import EightBall
 from message_logger import MessageLogger
+from markov import Markov
 
 # system imports
 import time, sys
 
+import random
 import re
 karma_regex = re.compile('\w+\+\+|\w+--')
 
@@ -54,6 +56,7 @@ class HyacinthBot(irc.IRCClient):
         # this is a stupid place for it
         self.persistence = Persistence()
         self.eightball = EightBall()
+        self.markov = Markov(training_file=self.factory.filename)
 
     def connectionLost(self, reason):
         irc.IRCClient.connectionLost(self, reason)
@@ -118,15 +121,23 @@ class HyacinthBot(irc.IRCClient):
 
     def process_message(self, user, channel, msg):
         self.record_karmas(user, channel, msg)
+
         if msg.startswith('!karma'):
             self.process_karmastring(user, channel, msg)
         elif msg.startswith('!8ball') and msg.endswith('?'):
             self.msg(channel, self.eightball.get_answer())
         elif msg.startswith('!markov'):
-            self.msg(channel, 'not just yet')
+            new_msg = msg.replace('!markov', '')
+            self.print_markov_sentence(user, channel, new_msg, force=True)
         elif msg.startswith('!commands'):
             self.msg(channel, '!karma, !8ball, !markov, !commands')
+        else:
+            self.print_markov_sentence(user, channel, msg)
 
+    def print_markov_sentence(self, user, channel, message, force=False):
+        thing_to_say = self.markov.generate_sentence(message)
+        if force or (thing_to_say.split() > 5 and random.random() > 0.99):
+            self.msg(channel, thing_to_say)
 
     def process_karmastring(self, user, channel, msg):
         # this is a stupid hack, since if there's not a space at the end
