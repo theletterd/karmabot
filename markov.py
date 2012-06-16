@@ -32,13 +32,14 @@ class Markov(object):
     def retrain(self, filename):
         with open(filename, 'r') as f:
             for line in f:
-                # remove any timing information, assuming it's from our logging whatsit
-                line = re.sub('\[\d\d:\d\d:\d\d\]', '', line)
-                line = line.strip()
                 if line:
                     self.add_to_brain(line)
 
     def add_to_brain(self, msg):
+        # remove any timing information, assuming it's from our logging whatsit
+        msg = re.sub('\[\d\d:\d\d:\d\d\]', '', msg)
+        msg = msg.strip()
+
         if not msg:
             return
         buf = [STOP_WORD] * self.chain_length

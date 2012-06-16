@@ -121,6 +121,7 @@ class HyacinthBot(irc.IRCClient):
 
     def process_message(self, user, channel, msg):
         self.record_karmas(user, channel, msg)
+        self.markov.add_to_brain(msg)
 
         if msg.startswith('!karma'):
             self.process_karmastring(user, channel, msg)
