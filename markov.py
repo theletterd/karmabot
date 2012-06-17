@@ -1,4 +1,4 @@
-from collections import defaultdict
+Bfrom collections import defaultdict
 import cPickle as pickle
 import random
 import re
@@ -44,6 +44,8 @@ class Markov(object):
             return
         buf = [STOP_WORD] * self.chain_length
         for word in msg.split():
+            if 'http://' in word or 'https://' in word:
+                word = "URL_REDACTED"
             self.brain[tuple(buf)].append(word)
             del buf[0]
             buf.append(word)
