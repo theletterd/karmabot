@@ -1,4 +1,4 @@
-BBfrom collections import defaultdict
+from collections import defaultdict
 import cPickle as pickle
 import random
 import re
