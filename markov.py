@@ -1,4 +1,4 @@
-Bfrom collections import defaultdict
+BBfrom collections import defaultdict
 import cPickle as pickle
 import random
 import re
@@ -42,6 +42,11 @@ class Markov(object):
 
         if not msg:
             return
+
+        # this ensures we ignore any commands.
+        if msg.startswith('!'):
+            return
+
         buf = [STOP_WORD] * self.chain_length
         for word in msg.split():
             if 'http://' in word or 'https://' in word:
