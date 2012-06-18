@@ -68,7 +68,7 @@ class Markov(object):
             # and then generate a buffer from that.
             random_word = random.choice(input_words)
             # build up some candidate phrases
-            candidates = [word_tuple for word_tuple in self.brain if random_word in word_tuple]
+            candidates = [word_tuple for word_tuple in self.brain if any(word.startswith(random_word) for word in word_tuple)]
             buf = list(random.choice(candidates))
 
         output_words = buf[:]
