@@ -137,7 +137,7 @@ class HyacinthBot(irc.IRCClient):
 
     def print_markov_sentence(self, user, channel, message, force=False):
         thing_to_say = self.markov.generate_sentence(message)
-        if force or (thing_to_say.split() > 5 and random.random() > 0.99):
+        if force or (len(thing_to_say.split()) > 5 and random.random() > 0.99):
             self.msg(channel, thing_to_say)
 
     def process_karmastring(self, user, channel, msg):
