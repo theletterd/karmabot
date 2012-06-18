@@ -130,8 +130,11 @@ class HyacinthBot(irc.IRCClient):
         elif msg.startswith('!markov'):
             new_msg = msg.replace('!markov', '')
             self.print_markov_sentence(user, channel, new_msg, force=True)
+        elif msg.startswith('!roll'):
+            new_msg = msg.replace('!roll', '')
+            self.roll(user, channel, new_msg)
         elif msg.startswith('!commands'):
-            self.msg(channel, '!karma, !8ball, !markov, !commands')
+            self.msg(channel, '!karma, !8ball, !markov, !roll, !commands')
         else:
             self.print_markov_sentence(user, channel, msg)
 
@@ -169,6 +172,18 @@ class HyacinthBot(irc.IRCClient):
             else:
                 self.persistence.record_karma(recipient, up=True)
 
+    def roll(self, user, channel, msg):
+        max = 20
+        msg_string = ''
+        try:
+            limit = int(msg)
+        except:
+            msg_string = 'Using d%d... ' % max
+            limit = max
+
+        value = random.randint(1, limit)
+        roll_string = '%s rolls... %d' % (user, value)
+        self.msg(channel, msg_string + roll_string)
 
 class HyacinthBotFactory(protocol.ClientFactory):
     """A factory for HyacinthBots.
