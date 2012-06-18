@@ -88,7 +88,7 @@ class HyacinthBot(irc.IRCClient):
 
         # Otherwise check to see if it is a message directed at me
         if msg.startswith(self.nickname + ":"):
-            msg = "%s: I am a log bot" % user
+            msg = "%s: I am the little death that brings total oblivion" % user
             self.msg(channel, msg)
             self.logger.log("<%s> %s" % (self.nickname, msg))
             return
