@@ -1,9 +1,14 @@
+# -*- coding: utf-8 -*-
+
 from collections import defaultdict
 import cPickle as pickle
 import random
 import re
 
 STOP_WORD = "\n"
+URL_REGEX = '(https?://)?(www.*\.)|([a-z0-9.\-]+[\.][a-z]{2,4}/)'
+# from http://daringfireball.net/2010/07/improved_regex_for_matching_urls, not working properly yet.
+# URL_REGEX_2 = """(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))"""
 
 class Markov(object):
     chain_length = 2
@@ -49,7 +54,7 @@ class Markov(object):
 
         buf = [STOP_WORD] * self.chain_length
         for word in msg.split():
-            if 'http://' in word or 'https://' in word:
+            if re.match(URL_REGEX, word):
                 word = "URL_REDACTED"
             self.brain[tuple(buf)].append(word)
             del buf[0]
@@ -69,10 +74,14 @@ class Markov(object):
             random_word = random.choice(input_words)
             # build up some candidate phrases
             candidates = [word_tuple for word_tuple in self.brain if any(word.startswith(random_word) for word in word_tuple)]
-            buf = list(random.choice(candidates))
+            if not candidates:
+                # well shit.
+                buf = list(random.choice(self.brain.keys()))
+            else:
+                buf = list(random.choice(candidates))
 
         output_words = buf[:]
-        for i in xrange(max_words):
+        for _ in xrange(max_words):
             try:
                 next_word = random.choice(self.brain[tuple(buf)])
             except IndexError:
