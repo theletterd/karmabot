@@ -33,6 +33,7 @@ from persistence import Persistence
 from eightball import EightBall
 from message_logger import MessageLogger
 from markov import Markov
+from roller import Roller
 
 # system imports
 import time, sys
@@ -57,6 +58,7 @@ class HyacinthBot(irc.IRCClient):
         self.persistence = Persistence()
         self.eightball = EightBall()
         self.markov = Markov(training_file=self.factory.filename)
+        self.roller = Roller()
 
     def connectionLost(self, reason):
         irc.IRCClient.connectionLost(self, reason)
@@ -173,17 +175,9 @@ class HyacinthBot(irc.IRCClient):
                 self.persistence.record_karma(recipient, up=True)
 
     def roll(self, user, channel, msg):
-        max = 20
-        msg_string = ''
-        try:
-            limit = int(msg)
-        except:
-            msg_string = 'Using d%d... ' % max
-            limit = max
-
-        value = random.randint(1, limit)
-        roll_string = '%s rolls... %d' % (user, value)
-        self.msg(channel, msg_string + roll_string)
+        die, value = self.roller.roll(msg)
+        roll_string = '%s rolls %s... %d' % (user, die, value)
+        self.msg(channel, roll_string)
 
 class HyacinthBotFactory(protocol.ClientFactory):
     """A factory for HyacinthBots.
