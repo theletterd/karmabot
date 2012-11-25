@@ -56,11 +56,15 @@ class Markov(object):
         for word in msg.split():
             if re.match(URL_REGEX, word):
                 word = "URL_REDACTED"
-            self.brain[tuple(buf)].append(word)
+
+            low_buffer = map(str.lower, buf)
+            self.brain[tuple(low_buffer)].append(word)
+
+            # keep the length of the buffer constant
             del buf[0]
             buf.append(word)
-        self.brain[tuple(buf)].append(STOP_WORD)
 
+        self.brain[tuple(buf)].append(STOP_WORD)
 
     def generate_sentence(self, input_message, max_words=default_max_words):
         # let's choose `chain_length` consecutive words from the input_message
