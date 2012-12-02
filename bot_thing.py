@@ -40,6 +40,7 @@ import random
 import re
 import sys
 import time
+from collections import defaultdict
 
 import config
 karma_regex = re.compile('\w+\+\+|\w+--')
@@ -63,6 +64,7 @@ class HyacinthBot(irc.IRCClient):
         self.eightball = EightBall()
         self.markov = Markov(config.markov_db_path)
         self.roller = Roller()
+        self.rate_limiter = CommandRateLimiter()
 
     def connectionLost(self, reason):
         irc.IRCClient.connectionLost(self, reason)
@@ -129,6 +131,14 @@ class HyacinthBot(irc.IRCClient):
         self.record_karmas(user, channel, msg)
         self.markov.add_single_line(msg)
 
+        if msg.startswith('!'):
+            self.rate_limiter.add_request(user)
+            if not self.rate_limiter.is_rate_limited(user):
+                self.process_command(user, channel, msg)
+        else:
+            self.print_markov_sentence(user, channel, msg)
+
+    def process_command(self, user, channel, msg):
         if msg.startswith('!karma'):
             self.process_karmastring(user, channel, msg)
         elif msg.startswith('!8ball') and msg.endswith('?'):
@@ -141,8 +151,6 @@ class HyacinthBot(irc.IRCClient):
             self.roll(user, channel, new_msg)
         elif msg.startswith('!commands'):
             self.msg(channel, '!karma, !8ball, !markov, !roll, !commands')
-        else:
-            self.print_markov_sentence(user, channel, msg)
 
     def print_markov_sentence(self, user, channel, message, force=False):
         thing_to_say = self.markov.generate_sentence(message)
@@ -182,6 +190,29 @@ class HyacinthBot(irc.IRCClient):
         die, value = self.roller.roll(msg)
         roll_string = '%s rolls %s... %d' % (user, die, value)
         self.msg(channel, roll_string)
+
+
+class CommandRateLimiter(object):
+
+    def __init__(self, timeout=600, max_requests=20):
+        self.timeout = timeout
+        self.max_requests = max_requests
+        self.requests_by_user = defaultdict(list)
+
+
+    def add_request(self, username):
+        now = int(time.time())
+        self.requests_by_user[username].append(now)
+
+    def is_rate_limited(self, username):
+        self.cleanup_requests()
+        return len(self.requests_by_user[username]) > self.max_requests
+
+    def cleanup_requests(self):
+        now = int(time.time())
+        for username, timestamps in self.requests_by_user.iteritems():
+            self.requests_by_user[username] = [timestamp for timestamp in timestamps if timestamp > (now - self.timeout)]
+
 
 class HyacinthBotFactory(protocol.ClientFactory):
     """A factory for HyacinthBots.
