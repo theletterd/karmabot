@@ -9,29 +9,7 @@ class MarkovStorage(object):
 
     def __init__(self, db_path):
         self.db_path = db_path
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=(?)", (config.word_table,))
-        name = cursor.fetchone()
-
-        # create table if it doesn't exist
-        if not name:
-            cursor.execute(
-                """
-	            CREATE TABLE %s (
-	                id INTEGER PRIMARY KEY,
-	                phrase varchar(255) NOT NULL,
-	                word varchar(255) NOT NULL,
-	                count int NOT NULL
-	            )
-	            """ % config.word_table
-	        )
-            cursor.execute("CREATE INDEX phrase_index ON %s(phrase)" % config.word_table)
-
-        conn.commit()
-        cursor.close()
-
+        self.create_table_if_non_existent()
 
     def db_transaction(function):
         def wrapped(self, *args, **kwargs):
@@ -49,6 +27,26 @@ class MarkovStorage(object):
             # return the result
             return result
         return wrapped
+
+    @db_transaction
+    def create_table_if_non_existent(self, cursor):
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=(?)", (config.word_table,))
+        name = cursor.fetchone()
+
+        # create table if it doesn't exist
+        if not name:
+            cursor.execute(
+                """
+	            CREATE TABLE %s (
+	                id INTEGER PRIMARY KEY,
+	                phrase varchar(255) NOT NULL,
+	                word varchar(255) NOT NULL,
+	                count int NOT NULL
+	            )
+	            """ % config.word_table
+	    )
+            cursor.execute("CREATE INDEX phrase_index ON %s(phrase)" % config.word_table)
+
 
     @db_transaction
     def store_phrases_and_words(self, cursor, input):

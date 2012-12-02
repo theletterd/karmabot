@@ -1,7 +1,6 @@
 # Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
-
 """
 An example IRC log bot - logs a channel's events to a file.
 
@@ -22,6 +21,11 @@ connect to, and file to log to, e.g.:
 will log channel #test to the file 'test.log'.
 """
 
+# system imports
+import random
+import re
+import sys
+import time
 
 # twisted imports
 from twisted.words.protocols import irc
@@ -29,27 +33,29 @@ from twisted.internet import reactor, protocol
 from twisted.python import log
 
 # mine
-from karmastore import KarmaStore
-from eightball import EightBall
-from message_logger import MessageLogger
+from eightball.eightball import EightBall
+from karmastore.karmastore import KarmaStore
 from markov.markov import Markov
-from roller import Roller
-
-# system imports
-import random
-import re
-import sys
-import time
-from collections import defaultdict
+from message_logger import MessageLogger
+from rate_limiter.rate_limiter import RateLimiter
+from roller.roller import Roller
 
 import config
 karma_regex = re.compile('\w+\+\+|\w+--')
 
 
-class HyacinthBot(irc.IRCClient):
+class HyacinthBot(irc.IRCClient, object):
     """An IRC bot."""
 
     nickname = "Hyacinth"
+
+    def __init__(self, *args, **kwargs):
+        super(HyacinthBot, self).__init__(*args, **kwargs)
+        self.karma_store = KarmaStore(config.karma_db_path)
+        self.eightball = EightBall(config.eightball_answers_path)
+        self.markov = Markov(config.markov_db_path)
+        self.roller = Roller()
+        self.rate_limiter = RateLimiter()
 
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
@@ -58,13 +64,6 @@ class HyacinthBot(irc.IRCClient):
             "[connected at %s]" %
             time.asctime(time.localtime(time.time()))
         )
-
-        # this is a stupid place for it
-        self.karma_store = KarmaStore()
-        self.eightball = EightBall()
-        self.markov = Markov(config.markov_db_path)
-        self.roller = Roller()
-        self.rate_limiter = CommandRateLimiter()
 
     def connectionLost(self, reason):
         irc.IRCClient.connectionLost(self, reason)
@@ -110,7 +109,6 @@ class HyacinthBot(irc.IRCClient):
         self.logger.log("* %s %s" % (user, msg))
 
     # irc callbacks
-
     def irc_NICK(self, prefix, params):
         """Called when an IRC user changes their nickname."""
         old_nick = prefix.split('!')[0]
@@ -136,7 +134,7 @@ class HyacinthBot(irc.IRCClient):
             if not self.rate_limiter.is_rate_limited(user):
                 self.process_command(user, channel, msg)
         else:
-            self.print_markov_sentence(user, channel, msg)
+            self.send_markov_sentence(user, channel, msg)
 
     def process_command(self, user, channel, msg):
         if msg.startswith('!karma'):
@@ -145,14 +143,14 @@ class HyacinthBot(irc.IRCClient):
             self.msg(channel, self.eightball.get_answer())
         elif msg.startswith('!markov'):
             new_msg = msg.replace('!markov', '')
-            self.print_markov_sentence(user, channel, new_msg, force=True)
+            self.send_markov_sentence(user, channel, new_msg, force=True)
         elif msg.startswith('!roll'):
             new_msg = msg.replace('!roll', '')
             self.roll(user, channel, new_msg)
         elif msg.startswith('!commands'):
             self.msg(channel, '!karma, !8ball, !markov, !roll, !commands')
 
-    def print_markov_sentence(self, user, channel, message, force=False):
+    def send_markov_sentence(self, user, channel, message, force=False):
         thing_to_say = self.markov.generate_sentence(message)
         if force or (len(thing_to_say.split()) > 5 and random.random() > 0.995):
             self.msg(channel, thing_to_say)
@@ -172,7 +170,6 @@ class HyacinthBot(irc.IRCClient):
     def record_karmas(self, user, channel, msg):
         karmas = karma_regex.findall(msg)
 
-        # fuckin' indentation
         if not karmas:
             return
 
@@ -190,28 +187,6 @@ class HyacinthBot(irc.IRCClient):
         die, value = self.roller.roll(msg)
         roll_string = '%s rolls %s... %d' % (user, die, value)
         self.msg(channel, roll_string)
-
-
-class CommandRateLimiter(object):
-
-    def __init__(self, timeout=600, max_requests=20):
-        self.timeout = timeout
-        self.max_requests = max_requests
-        self.requests_by_user = defaultdict(list)
-
-
-    def add_request(self, username):
-        now = int(time.time())
-        self.requests_by_user[username].append(now)
-
-    def is_rate_limited(self, username):
-        self.cleanup_requests()
-        return len(self.requests_by_user[username]) > self.max_requests
-
-    def cleanup_requests(self):
-        now = int(time.time())
-        for username, timestamps in self.requests_by_user.iteritems():
-            self.requests_by_user[username] = [timestamp for timestamp in timestamps if timestamp > (now - self.timeout)]
 
 
 class HyacinthBotFactory(protocol.ClientFactory):

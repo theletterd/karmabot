@@ -1,0 +1,1 @@
+karma_table = 'karmalog'
