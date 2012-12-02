@@ -9,17 +9,18 @@ Hey %s!
 Hey there, %s!
 Heya, %s!
 Hi, %s!
-Hiya, %s!
-Hola, %s!
+Hiya, %s! :)
+Hola, %s! :D
 Morning, %s!
 Nice of you to swing by, %s
 Well look who it is... it's %s!
 What's up, %s?
 awwwww yeaah, %s is in the house!
 hey %s :)
+hey %s :D
 hi, %s
-oh hai %s
-oh look, it's %s
+oh hai %s :D
+oh look, it's %s :)
 so, %s, what're you wearing?
 %s!!!!!
 %s <3 hi!

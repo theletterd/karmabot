@@ -27,25 +27,21 @@ import re
 import sys
 import time
 
-# twisted imports
-from twisted.words.protocols import irc
-from twisted.internet import reactor, protocol
-from twisted.python import log
+import config
 
-# mine
+from base_irc_bot.base_irc_bot import BaseIRCBot
+from base_irc_bot.bot_factory import BotFactory
 from eightball.eightball import EightBall
 from greeter.greeter import Greeter
 from karmastore.karmastore import KarmaStore
 from markov.markov import Markov
-from message_logger import MessageLogger
 from rate_limiter.rate_limiter import RateLimiter
 from roller.roller import Roller
 
-import config
 karma_regex = re.compile('\w+\+\+|\w+--')
 
 
-class HyacinthBot(irc.IRCClient, object):
+class HyacinthBot(BaseIRCBot):
     """An IRC bot."""
 
     nickname = "Hyacinth"
@@ -59,27 +55,7 @@ class HyacinthBot(irc.IRCClient, object):
         self.rate_limiter = RateLimiter()
         self.greeter = Greeter(config.greetings_path)
 
-    def connectionMade(self):
-        irc.IRCClient.connectionMade(self)
-        self.logger = MessageLogger(open(self.factory.filename, "a"))
-        self.logger.log(
-            "[connected at %s]" %
-            time.asctime(time.localtime(time.time()))
-        )
-
-    def connectionLost(self, reason):
-        irc.IRCClient.connectionLost(self, reason)
-        self.logger.log(
-            "[disconnected at %s]" %
-            time.asctime(time.localtime(time.time()))
-        )
-        self.logger.close()
-
     # callbacks for events
-    def signedOn(self):
-        """Called when bot has succesfully signed on to server."""
-        self.join(self.factory.channel)
-
     def privmsg(self, user, channel, msg):
         """This will get called when the bot receives a message."""
         user = user.split('!', 1)[0]
@@ -100,25 +76,11 @@ class HyacinthBot(irc.IRCClient, object):
 
         self.process_message(user, channel, msg)
 
-    def action(self, user, channel, msg):
-        """This will get called when the bot sees someone do an action."""
-        # i.e. /me <something>
-        user = user.split('!', 1)[0]
-        self.logger.log("* %s %s" % (user, msg))
-
     def userJoined(self, user, channel):
+        """Greets a user when they join the channel"""
         greeting = self.greeter.greet(user)
         if greeting:
             self.msg(channel, greeting)
-
-    # For fun, override the method that determines how a nickname is changed on
-    # collisions. The default method appends an underscore.
-    def alterCollidedNick(self, nickname):
-        """
-        Generate an altered version of a nickname that caused a collision in an
-        effort to create an unused related name for subsequent registration.
-        """
-        return nickname + '^'
 
     def process_message(self, user, channel, msg):
         self.record_karmas(user, channel, msg)
@@ -169,7 +131,7 @@ class HyacinthBot(irc.IRCClient, object):
             return
 
         for karma in karmas:
-            recipient = karma[:-2]
+            recipient = karma[:-2] # on account of the ++ or --
             if recipient == user:
                 self.msg(channel, 'no altering your own karma, %s' % user)
                 continue
@@ -184,37 +146,8 @@ class HyacinthBot(irc.IRCClient, object):
         self.msg(channel, roll_string)
 
 
-class HyacinthBotFactory(protocol.ClientFactory):
-    """A factory for HyacinthBots.
-
-    A new protocol instance will be created each time we connect to the server.
-    """
-
-    # the class of the protocol to build when new connection is made
-    protocol = HyacinthBot
-
-    def __init__(self, channel):
-        self.channel = channel
-        self.filename = config.logfile_path
-
-    def clientConnectionLost(self, connector, reason):
-        """If we get disconnected, reconnect to server."""
-        connector.connect()
-
-    def clientConnectionFailed(self, connector, reason):
-        print "connection failed:", reason
-        reactor.stop()
-
-
 if __name__ == '__main__':
-    # initialize logging
-    log.startLogging(sys.stdout)
-
-    # create factory protocol and application
-    f = HyacinthBotFactory(sys.argv[1])
-
-    # connect factory to this host and port
-    reactor.connectTCP("irc.freenode.net", 6667, f)
-
-    # run bot
-    reactor.run()
+    channel = sys.argv[1]
+    factory = BotFactory(channel, HyacinthBot, config.logfile_path)
+    factory.connect("irc.freenode.net", 6667)
+    factory.run()

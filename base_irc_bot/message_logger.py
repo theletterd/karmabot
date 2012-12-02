@@ -1,6 +1,6 @@
 import time
 
-class MessageLogger:
+class MessageLogger(object):
     """
     An independent logger class (because separation of application
     and protocol logic is a good thing).
