@@ -32,14 +32,16 @@ from twisted.python import log
 from persistence import Persistence
 from eightball import EightBall
 from message_logger import MessageLogger
-from markov import Markov
+from markov.markov import Markov
 from roller import Roller
 
 # system imports
-import time, sys
-
 import random
 import re
+import sys
+import time
+
+import config
 karma_regex = re.compile('\w+\+\+|\w+--')
 
 
@@ -51,24 +53,26 @@ class HyacinthBot(irc.IRCClient):
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
         self.logger = MessageLogger(open(self.factory.filename, "a"))
-        self.logger.log("[connected at %s]" %
-                        time.asctime(time.localtime(time.time())))
+        self.logger.log(
+            "[connected at %s]" %
+            time.asctime(time.localtime(time.time()))
+        )
 
         # this is a stupid place for it
         self.persistence = Persistence()
         self.eightball = EightBall()
-        self.markov = Markov(training_file=self.factory.filename)
+        self.markov = Markov(config.markov_db_path)
         self.roller = Roller()
 
     def connectionLost(self, reason):
         irc.IRCClient.connectionLost(self, reason)
-        self.logger.log("[disconnected at %s]" %
-                        time.asctime(time.localtime(time.time())))
+        self.logger.log(
+            "[disconnected at %s]" %
+            time.asctime(time.localtime(time.time()))
+        )
         self.logger.close()
 
-
     # callbacks for events
-
     def signedOn(self):
         """Called when bot has succesfully signed on to server."""
         self.join(self.factory.channel)
@@ -123,7 +127,7 @@ class HyacinthBot(irc.IRCClient):
 
     def process_message(self, user, channel, msg):
         self.record_karmas(user, channel, msg)
-        self.markov.add_to_brain(msg)
+        self.markov.add_single_line(msg)
 
         if msg.startswith('!karma'):
             self.process_karmastring(user, channel, msg)
@@ -188,9 +192,9 @@ class HyacinthBotFactory(protocol.ClientFactory):
     # the class of the protocol to build when new connection is made
     protocol = HyacinthBot
 
-    def __init__(self, channel, filename):
+    def __init__(self, channel):
         self.channel = channel
-        self.filename = filename
+        self.filename = config.logfile_path
 
     def clientConnectionLost(self, connector, reason):
         """If we get disconnected, reconnect to server."""
@@ -206,7 +210,7 @@ if __name__ == '__main__':
     log.startLogging(sys.stdout)
 
     # create factory protocol and application
-    f = HyacinthBotFactory(sys.argv[1], sys.argv[2])
+    f = HyacinthBotFactory(sys.argv[1])
 
     # connect factory to this host and port
     reactor.connectTCP("irc.freenode.net", 6667, f)
