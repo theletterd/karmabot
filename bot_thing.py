@@ -34,6 +34,7 @@ from twisted.python import log
 
 # mine
 from eightball.eightball import EightBall
+from greeter.greeter import Greeter
 from karmastore.karmastore import KarmaStore
 from markov.markov import Markov
 from message_logger import MessageLogger
@@ -56,6 +57,7 @@ class HyacinthBot(irc.IRCClient, object):
         self.markov = Markov(config.markov_db_path)
         self.roller = Roller()
         self.rate_limiter = RateLimiter()
+        self.greeter = Greeter(config.greetings_path)
 
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
@@ -77,10 +79,6 @@ class HyacinthBot(irc.IRCClient, object):
     def signedOn(self):
         """Called when bot has succesfully signed on to server."""
         self.join(self.factory.channel)
-
-    def joined(self, channel):
-        """This will get called when the bot joins the channel."""
-        self.logger.log("[I have joined %s]" % channel)
 
     def privmsg(self, user, channel, msg):
         """This will get called when the bot receives a message."""
@@ -108,13 +106,10 @@ class HyacinthBot(irc.IRCClient, object):
         user = user.split('!', 1)[0]
         self.logger.log("* %s %s" % (user, msg))
 
-    # irc callbacks
-    def irc_NICK(self, prefix, params):
-        """Called when an IRC user changes their nickname."""
-        old_nick = prefix.split('!')[0]
-        new_nick = params[0]
-        self.logger.log("%s is now known as %s" % (old_nick, new_nick))
-
+    def userJoined(self, user, channel):
+        greeting = self.greeter.greet(user)
+        if greeting:
+            self.msg(channel, greeting)
 
     # For fun, override the method that determines how a nickname is changed on
     # collisions. The default method appends an underscore.
