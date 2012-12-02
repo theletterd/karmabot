@@ -1,13 +1,13 @@
 import sqlite3
 import time
 
-SQLITE_DB = 'hyacinth_db'
+import config
 
 KARMA_TABLE = 'karmalog'
 KARMA_TABLE_CREATE = 'create table %s (time integer, name text, score integer)' % KARMA_TABLE
 
 
-class Persistence(object):
+class KarmaStore(object):
 
     def __init__(self):
         cursor = self.get_cursor()
@@ -19,7 +19,7 @@ class Persistence(object):
 
     # maybe it makes sense to write your own context manager
     def get_cursor(self):
-        return sqlite3.connect(SQLITE_DB).cursor()
+        return sqlite3.connect(config.karma_db).cursor()
 
     def close_cursor(self, cursor):
         cursor.connection.commit()

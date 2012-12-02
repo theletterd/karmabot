@@ -29,7 +29,7 @@ from twisted.internet import reactor, protocol
 from twisted.python import log
 
 # mine
-from persistence import Persistence
+from karmastore import KarmaStore
 from eightball import EightBall
 from message_logger import MessageLogger
 from markov.markov import Markov
@@ -59,7 +59,7 @@ class HyacinthBot(irc.IRCClient):
         )
 
         # this is a stupid place for it
-        self.persistence = Persistence()
+        self.karma_store = KarmaStore()
         self.eightball = EightBall()
         self.markov = Markov(config.markov_db_path)
         self.roller = Roller()
@@ -158,7 +158,7 @@ class HyacinthBot(irc.IRCClient):
             requested_user = user
         else:
             requested_user = split_msg[1]
-        msg = self.persistence.get_karma(requested_user)
+        msg = self.karma_store.get_karma(requested_user)
         self.msg(channel, str(msg))
 
     def record_karmas(self, user, channel, msg):
@@ -174,9 +174,9 @@ class HyacinthBot(irc.IRCClient):
                 self.msg(channel, 'no altering your own karma, %s' % user)
                 continue
             if karma.endswith('--'):
-                self.persistence.record_karma(recipient, up=False)
+                self.karma_store.record_karma(recipient, up=False)
             else:
-                self.persistence.record_karma(recipient, up=True)
+                self.karma_store.record_karma(recipient, up=True)
 
     def roll(self, user, channel, msg):
         die, value = self.roller.roll(msg)
