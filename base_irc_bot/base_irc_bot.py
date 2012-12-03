@@ -21,9 +21,16 @@ class BaseIRCBot(irc.IRCClient, object):
         )
         self.logger.close()
 
+    def identify(self):
+        if self.password:
+            self.msg('NickServ', 'RELEASE %s %s' % (self.nickname, self.password))
+            self.msg('NickServ', 'RELEASE %s %s' % (self.nickname, self.password))
+            self.msg('NickServ', 'IDENTIFY %s %s' % (self.nickname, self.password))
+
     def signedOn(self):
         """Called when bot has succesfully signed on to server."""
         self.join(self.factory.channel)
+        self.identify()
 
     def action(self, user, channel, msg):
         """This will get called when the bot sees someone do an action."""

@@ -44,10 +44,11 @@ karma_regex = re.compile('\w+\+\+|\w+--')
 class HyacinthBot(BaseIRCBot):
     """An IRC bot."""
 
-    nickname = "Hyacinth"
+    nickname = config.nickname
 
     def __init__(self, *args, **kwargs):
         super(HyacinthBot, self).__init__(*args, **kwargs)
+        self.password = config.password
         self.karma_store = KarmaStore(config.karma_db_path)
         self.eightball = EightBall(config.eightball_answers_path)
         self.markov = Markov(config.markov_db_path)
@@ -94,6 +95,10 @@ class HyacinthBot(BaseIRCBot):
             self.send_markov_sentence(user, channel, msg)
 
     def process_command(self, user, channel, msg):
+        """Decide how to act upon a message, given that it is a command
+        i.e. begins with !, e.g. "!karma"
+        """
+
         if msg.startswith('!karma'):
             self.process_karmastring(user, channel, msg)
         elif msg.startswith('!8ball') and msg.endswith('?'):
