@@ -3,7 +3,7 @@ import time
 
 class RateLimiter(object):
 
-    def __init__(self, timeout=600, max_requests=20):
+    def __init__(self, timeout=600, max_requests=5):
         self.timeout = timeout
         self.max_requests = max_requests
         self.requests_by_user = defaultdict(list)
