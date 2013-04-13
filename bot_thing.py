@@ -54,7 +54,7 @@ class HyacinthBot(BaseIRCBot):
         self.markov = Markov(config.markov_db_path)
         self.roller = Roller()
         self.rate_limiter = RateLimiter()
-        self.greeter = Greeter(config.greetings_path)
+        self.greeter = Greeter(config.greetings_path, config.greeting_probability)
 
     # callbacks for events
     def privmsg(self, user, channel, msg):
